@@ -10,6 +10,7 @@ This module provides a human agent to control the ego vehicle via keyboard
 from __future__ import print_function
 
 import json
+import math
 import random
 import signal
 import sys
@@ -21,6 +22,7 @@ from srunner.autoagents.agent_wrapper import AgentWrapper
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
 from srunner.scenariomanager.timer import GameTime
 from human_agent import  HumanAgent
+from imitation_agent import ImitationAgent
 
 class HumanInterface(object):
 
@@ -97,6 +99,7 @@ if __name__ == '__main__':
     frame_rate = 20.0
     trafficManagerSeed = 0
     trafficManagerPort = 8000
+    city_name = 'Town02'
     actor_list = []
     work_agent = None
     a_agent = None
@@ -111,7 +114,7 @@ if __name__ == '__main__':
         client = carla.Client(host, port)
         client.set_timeout(2.0)
 
-        world = client.get_world()
+        world = client.load_world(city_name)
         traffic_manager = client.get_trafficmanager(int(trafficManagerPort))
 
         settings = world.get_settings()
@@ -142,24 +145,22 @@ if __name__ == '__main__':
         actor_list.append(vehicle)
 
         # set agent
-        a_agent = HumanAgent(path_to_conf_file="")
+        # a_agent = HumanAgent(path_to_conf_file="")
+        a_agent = ImitationAgent(vehicle, city_name, True)
         work_agent = AgentWrapper(a_agent)
         work_agent.setup_sensors(vehicle)
 
         hic = HumanInterface()
-        # display = pygame.display.set_mode(
-        #     (width, height),
-        #     pygame.HWSURFACE | pygame.DOUBLEBUF)
-        #
-        # hud = HUD(args.width, args.height)
-        # world = WorldSR(client.get_world(), hud, args)
-        # controller = KeyboardControl(world, args.autopilot)
+
 
         clock = pygame.time.Clock()
         while True:
             # game loop
             world = CarlaDataProvider.get_world()
             if world:
+                v = vehicle.get_velocity()
+                a_agent.current_speed = math.sqrt(v.x**2 + v.y**2 + v.z**2)
+                print('speed:', a_agent.current_speed)
                 snapshot = world.get_snapshot()
                 if snapshot:
                     timestamp = snapshot.timestamp
